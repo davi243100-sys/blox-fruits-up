@@ -14,19 +14,19 @@ button { background:#22c55e; color:#000; font-weight:bold; cursor:pointer; }
 .order { background:#020617; padding:10px; margin-top:10px; border-radius:5px; border:1px solid #334155; }
 .notice { font-size:12px; color:#94a3b8; margin-top:10px; }
 .admin { border:2px solid gold; }
+#switchAuth { background:#3b82f6; color:#fff; margin-top:10px; }
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div class="container" id="loginBox">
-  <h2>Entrar</h2>
+<!-- LOGIN / CADASTRO -->
+<div class="container" id="authBox">
+  <h2 id="authTitle">Entrar</h2>
   <input id="email" placeholder="Email">
   <input id="password" type="password" placeholder="Senha">
-  <button onclick="login()">Entrar</button>
-  <p class="notice">
-    ⚠️ Não compartilhe seu e-mail com desconhecidos.
-  </p>
+  <button id="authBtn" onclick="login()">Entrar</button>
+  <button id="switchAuth" onclick="toggleAuth()">Cadastrar</button>
+  <p class="notice">⚠️ Não compartilhe seu e-mail com desconhecidos.</p>
 </div>
 
 <!-- LOJA -->
@@ -41,6 +41,7 @@ button { background:#22c55e; color:#000; font-weight:bold; cursor:pointer; }
 <div class="container hidden admin" id="adminBox">
   <h2>Painel do Admin</h2>
   <div id="orders"></div>
+  <button onclick="logout()" style="background:#ef4444;margin-top:20px;">Sair</button>
 </div>
 
 <!-- FIREBASE -->
@@ -54,35 +55,59 @@ const firebaseConfig = {
   authDomain: "COLE_AQUI",
   projectId: "COLE_AQUI",
 };
-
 firebase.initializeApp(firebaseConfig);
+
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// Admin
 const ADMIN_EMAIL = "davi.243100@gmail.com";
-const ADMIN_PASSWORD = "king";
+
+let isLogin = true; // controla se está em login ou cadastro
+
+function toggleAuth() {
+  isLogin = !isLogin;
+  document.getElementById("authTitle").innerText = isLogin ? "Entrar" : "Cadastrar";
+  document.getElementById("authBtn").innerText = isLogin ? "Entrar" : "Cadastrar";
+  document.getElementById("switchAuth").innerText = isLogin ? "Cadastrar" : "Já tenho conta";
+}
 
 function login() {
-  const email = email.value;
-  const password = password.value;
-  auth.signInWithEmailAndPassword(email, password)
-  .then(() => {})
-  .catch(err => alert(err.message));
+  const emailInput = document.getElementById("email").value;
+  const passwordInput = document.getElementById("password").value;
+
+  if (!emailInput || !passwordInput) return alert("Preencha email e senha");
+
+  if (isLogin) {
+    // LOGIN
+    auth.signInWithEmailAndPassword(emailInput, passwordInput)
+      .catch(err => alert(err.message));
+  } else {
+    // CADASTRO
+    auth.createUserWithEmailAndPassword(emailInput, passwordInput)
+      .then(() => alert("Cadastro realizado com sucesso!"))
+      .catch(err => alert(err.message));
+  }
 }
 
 function logout() {
   auth.signOut();
 }
 
+// Troca de páginas
 auth.onAuthStateChanged(user => {
+  const authBox = document.getElementById("authBox");
+  const shopBox = document.getElementById("shopBox");
+  const adminBox = document.getElementById("adminBox");
+
   if (!user) {
-    loginBox.classList.remove("hidden");
+    authBox.classList.remove("hidden");
     shopBox.classList.add("hidden");
     adminBox.classList.add("hidden");
     return;
   }
 
-  loginBox.classList.add("hidden");
+  authBox.classList.add("hidden");
 
   if (user.email === ADMIN_EMAIL) {
     adminBox.classList.remove("hidden");
@@ -92,8 +117,10 @@ auth.onAuthStateChanged(user => {
   }
 });
 
+// Enviar pedido
 function sendOrder() {
-  const product = document.getElementById("product").value;
+  const productInput = document.getElementById("product");
+  const product = productInput.value;
   if (!product) return alert("Digite o produto");
 
   db.collection("orders").add({
@@ -103,25 +130,27 @@ function sendOrder() {
     created: new Date()
   }).then(() => {
     alert("Pedido enviado!");
-    product.value = "";
+    productInput.value = "";
   });
 }
 
+// Carregar pedidos admin
 function loadOrders() {
+  const ordersDiv = document.getElementById("orders");
   db.collection("orders").orderBy("created","desc")
-  .onSnapshot(snapshot => {
-    orders.innerHTML = "";
-    snapshot.forEach(doc => {
-      const o = doc.data();
-      orders.innerHTML += `
-        <div class="order">
-          <b>Usuário:</b> ${o.user}<br>
-          <b>Produto:</b> ${o.product}<br>
-          <b>Status:</b> ${o.status}
-        </div>
-      `;
+    .onSnapshot(snapshot => {
+      ordersDiv.innerHTML = "";
+      snapshot.forEach(doc => {
+        const o = doc.data();
+        ordersDiv.innerHTML += `
+          <div class="order">
+            <b>Usuário:</b> ${o.user}<br>
+            <b>Produto:</b> ${o.product}<br>
+            <b>Status:</b> ${o.status}
+          </div>
+        `;
+      });
     });
-  });
 }
 </script>
 
