@@ -1,166 +1,128 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Blox Fruits UP — Loja Oficial</title>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-  <style>
-    body{margin:0;font-family:Arial;background:#0b1020;color:#e6e8ff}
-    .hidden{display:none}
-    header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:#0f1433}
-    .container{padding:18px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
-    .card{background:#121735;border-radius:14px;padding:16px}
-    input,button,textarea{width:100%;padding:10px;border-radius:10px;border:none;margin-top:8px}
-    input,textarea{background:#1b2150;color:#fff}
-    button{background:#6c7cff;color:#0b1020;font-weight:700;cursor:pointer}
-    .secondary{background:#232a6b;color:#fff}
-    .toast{position:fixed;right:18px;bottom:18px;background:#121735;padding:14px;border-radius:12px}
-    .notif{position:fixed;right:18px;top:70px;background:#121735;padding:14px;border-radius:12px;width:340px;max-height:65vh;overflow:auto}
-    .badge{background:#ff4d4f;color:#fff;border-radius:999px;padding:2px 8px;font-size:12px;margin-left:6px}
-  </style>
+<meta charset="UTF-8">
+<title>Blox Fruits UP</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body { font-family: Arial, sans-serif; background:#0f172a; color:#fff; margin:0; }
+.container { max-width:400px; margin:40px auto; background:#020617; padding:20px; border-radius:10px; }
+h2 { text-align:center; }
+input, button { width:100%; padding:10px; margin-top:10px; border-radius:5px; border:none; }
+button { background:#22c55e; color:#000; font-weight:bold; cursor:pointer; }
+.hidden { display:none; }
+.order { background:#020617; padding:10px; margin-top:10px; border-radius:5px; border:1px solid #334155; }
+.notice { font-size:12px; color:#94a3b8; margin-top:10px; }
+.admin { border:2px solid gold; }
+</style>
 </head>
 <body>
 
 <!-- LOGIN -->
-<div id="login" class="container">
-  <div class="card" style="max-width:420px;margin:auto;margin-top:8vh">
-    <h2>Cadastro / Entrada</h2>
-    <p style="font-size:13px;color:#cbd0ff">
-      Por favor, não compartilhe seu e-mail com desconhecidos.
-      Pessoas que conheçam este site podem tentar se passar por você.
-    </p>
-    <input id="email" placeholder="E-mail" />
-    <input id="password" type="password" placeholder="Senha" />
-    <button onclick="login()">Entrar</button>
-  </div>
+<div class="container" id="loginBox">
+  <h2>Entrar</h2>
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Senha">
+  <button onclick="login()">Entrar</button>
+  <p class="notice">
+    ⚠️ Não compartilhe seu e-mail com desconhecidos.
+  </p>
 </div>
 
-<!-- SITE -->
-<div id="site" class="hidden">
-  <header>
-    <h3>BLOX FRUITS UP</h3>
-    <button class="secondary" onclick="toggleNotif()">
-      🔔 <span id="badge" class="badge hidden">0</span>
-    </button>
-  </header>
-
-  <div class="container">
-    <h2 id="welcome"></h2>
-    <div class="grid">
-      <div class="card"><h4>Max Level</h4><button onclick="order('Max Level')">Pedir</button></div>
-      <div class="card"><h4>Raça V1</h4><button onclick="order('Raça V1')">Pedir</button></div>
-      <div class="card"><h4>Raça V2</h4><button onclick="order('Raça V2')">Pedir</button></div>
-      <div class="card"><h4>Raça V3</h4><button onclick="order('Raça V3')">Pedir</button></div>
-    </div>
-  </div>
+<!-- LOJA -->
+<div class="container hidden" id="shopBox">
+  <h2>Comprar UP</h2>
+  <input id="product" placeholder="Produto (ex: Max Level)">
+  <button onclick="sendOrder()">Enviar Pedido</button>
+  <button onclick="logout()" style="background:#ef4444;margin-top:20px;">Sair</button>
 </div>
 
-<!-- NOTIFICAÇÕES -->
-<div id="notif" class="notif hidden"></div>
-<div id="toast" class="toast hidden"></div>
+<!-- ADMIN -->
+<div class="container hidden admin" id="adminBox">
+  <h2>Painel do Admin</h2>
+  <div id="orders"></div>
+</div>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <script>
-  // 🔥 CONFIG FIREBASE (SUBSTITUA PELOS SEUS DADOS)
-  const firebaseConfig = {
-    apiKey: "SUA_API_KEY",
-    authDomain: "SEU_DOMINIO.firebaseapp.com",
-    projectId: "SEU_PROJECT_ID",
-  };
+const firebaseConfig = {
+  apiKey: "COLE_AQUI",
+  authDomain: "COLE_AQUI",
+  projectId: "COLE_AQUI",
+};
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-  // 👑 DONO
-  const OWNER_EMAIL = "davi.243100@gmail.com";
-  const OWNER_PASSWORD = "king";
-  let currentUser = null;
+const ADMIN_EMAIL = "davi.243100@gmail.com";
+const ADMIN_PASSWORD = "king";
 
-  // 🔐 LOGIN
-  function login(){
-    const email = emailInput();
-    const password = passInput();
-    if(!email || !password) return alert("Preencha tudo");
+function login() {
+  const email = email.value;
+  const password = password.value;
+  auth.signInWithEmailAndPassword(email, password)
+  .then(() => {})
+  .catch(err => alert(err.message));
+}
 
-    auth.signInWithEmailAndPassword(email,password)
-      .then(res=>initUser(res.user,password))
-      .catch(()=>{
-        auth.createUserWithEmailAndPassword(email,password)
-          .then(res=>initUser(res.user,password));
-      });
+function logout() {
+  auth.signOut();
+}
+
+auth.onAuthStateChanged(user => {
+  if (!user) {
+    loginBox.classList.remove("hidden");
+    shopBox.classList.add("hidden");
+    adminBox.classList.add("hidden");
+    return;
   }
 
-  function initUser(user,password){
-    const isOwner = user.email === OWNER_EMAIL && password === OWNER_PASSWORD;
-    currentUser = { uid:user.uid, email:user.email, isOwner };
+  loginBox.classList.add("hidden");
 
-    document.getElementById("login").classList.add("hidden");
-    document.getElementById("site").classList.remove("hidden");
-    document.getElementById("welcome").innerText = isOwner ? "Painel do King" : "Bem-vindo";
-
-    if(isOwner) listenOrders();
+  if (user.email === ADMIN_EMAIL) {
+    adminBox.classList.remove("hidden");
+    loadOrders();
+  } else {
+    shopBox.classList.remove("hidden");
   }
+});
 
-  // 🛒 PEDIDOS
-  function order(product){
-    db.collection("orders").add({
-      product,
-      userEmail: currentUser.email,
-      status: "novo",
-      created: firebase.firestore.FieldValue.serverTimestamp()
+function sendOrder() {
+  const product = document.getElementById("product").value;
+  if (!product) return alert("Digite o produto");
+
+  db.collection("orders").add({
+    user: auth.currentUser.email,
+    product,
+    status: "Pendente",
+    created: new Date()
+  }).then(() => {
+    alert("Pedido enviado!");
+    product.value = "";
+  });
+}
+
+function loadOrders() {
+  db.collection("orders").orderBy("created","desc")
+  .onSnapshot(snapshot => {
+    orders.innerHTML = "";
+    snapshot.forEach(doc => {
+      const o = doc.data();
+      orders.innerHTML += `
+        <div class="order">
+          <b>Usuário:</b> ${o.user}<br>
+          <b>Produto:</b> ${o.product}<br>
+          <b>Status:</b> ${o.status}
+        </div>
+      `;
     });
-    toast("Estamos enviando seu pedido para o vendedor...");
-  }
-
-  // 🔔 NOTIFICAÇÕES / HISTÓRICO
-  function listenOrders(){
-    db.collection("orders").orderBy("created","desc")
-      .onSnapshot(snapshot=>{
-        const box = document.getElementById("notif");
-        box.innerHTML = "<h4>Pedidos / Histórico</h4>";
-        document.getElementById("badge").classList.remove("hidden");
-        document.getElementById("badge").innerText = snapshot.docs.length;
-
-        snapshot.forEach(doc=>{
-          const o = doc.data();
-          const div = document.createElement("div");
-          div.className="card";
-          div.innerHTML = `
-            <b>${o.userEmail}</b><br>
-            ${o.product}<br>
-            Status: ${o.status}
-          `;
-          if(o.status==="novo"){
-            const btn=document.createElement("button");
-            btn.innerText="Aceitar pedido";
-            btn.onclick=()=>db.collection("orders").doc(doc.id).update({status:"aceito"});
-            div.appendChild(btn);
-          }
-          box.appendChild(div);
-        });
-      });
-  }
-
-  // UI
-  function toggleNotif(){
-    document.getElementById("notif").classList.toggle("hidden");
-  }
-  function toast(msg){
-    const t=document.getElementById("toast");
-    t.innerText=msg;
-    t.classList.remove("hidden");
-    setTimeout(()=>t.classList.add("hidden"),3000);
-  }
-
-  function emailInput(){return document.getElementById("email").value.trim();}
-  function passInput(){return document.getElementById("password").value.trim();}
+  });
+}
 </script>
 
 </body>
