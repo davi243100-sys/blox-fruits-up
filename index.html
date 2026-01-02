@@ -45,7 +45,7 @@ button { background:#22c55e; color:#000; font-weight:bold; cursor:pointer; }
 </div>
 
 <script>
-let isLogin = true; // login ou cadastro
+let isLogin = true; // controla se está em login ou cadastro
 const ADMIN_EMAIL = "davi.243100@gmail.com";
 
 function toggleAuth() {
@@ -55,23 +55,23 @@ function toggleAuth() {
   document.getElementById("switchAuth").innerText = isLogin ? "Cadastrar" : "Já tenho conta";
 }
 
+// LOGIN / CADASTRO
 function authAction() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
 
   if (!email || !password) return alert("Preencha email e senha");
 
-  // pegar usuários do localStorage
   let users = JSON.parse(localStorage.getItem("users") || "[]");
 
   if (isLogin) {
     // LOGIN
     const user = users.find(u => u.email === email && u.password === password);
-    if (!user) return alert("Email ou senha incorretos");
+    if (!user) return alert("Email ou senha incorretos. Se não tiver conta, clique em 'Cadastrar'");
     loginUser(user.email);
   } else {
     // CADASTRO
-    if (users.find(u => u.email === email)) return alert("Email já cadastrado");
+    if (users.find(u => u.email === email)) return alert("Email já cadastrado. Clique em 'Entrar'");
     users.push({ email, password });
     localStorage.setItem("users", JSON.stringify(users));
     alert("Cadastro realizado com sucesso!");
@@ -97,10 +97,10 @@ function logout() {
   document.getElementById("adminBox").classList.add("hidden");
 }
 
-// Pedidos
+// PEDIDOS
 function sendOrder() {
   const productInput = document.getElementById("product");
-  const product = productInput.value;
+  const product = productInput.value.trim();
   if (!product) return alert("Digite o produto");
 
   let orders = JSON.parse(localStorage.getItem("orders") || "[]");
@@ -115,7 +115,7 @@ function sendOrder() {
   productInput.value = "";
 }
 
-// Carregar pedidos admin
+// CARREGAR PEDIDOS ADMIN
 function loadOrders() {
   const ordersDiv = document.getElementById("orders");
   let orders = JSON.parse(localStorage.getItem("orders") || "[]");
@@ -132,7 +132,7 @@ function loadOrders() {
   });
 }
 
-// Auto-login se já estiver
+// AUTO-LOGIN SE JÁ HOUVER USUÁRIO
 window.onload = () => {
   const currentUser = localStorage.getItem("currentUser");
   if (currentUser) loginUser(currentUser);
