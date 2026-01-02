@@ -24,7 +24,7 @@ button { background:#22c55e; color:#000; font-weight:bold; cursor:pointer; }
   <h2 id="authTitle">Entrar</h2>
   <input id="email" placeholder="Email">
   <input id="password" type="password" placeholder="Senha">
-  <button id="authBtn" onclick="login()">Entrar</button>
+  <button id="authBtn" onclick="authAction()">Entrar</button>
   <button id="switchAuth" onclick="toggleAuth()">Cadastrar</button>
   <p class="notice">⚠️ Não compartilhe seu e-mail com desconhecidos.</p>
 </div>
@@ -44,26 +44,9 @@ button { background:#22c55e; color:#000; font-weight:bold; cursor:pointer; }
   <button onclick="logout()" style="background:#ef4444;margin-top:20px;">Sair</button>
 </div>
 
-<!-- FIREBASE -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
 <script>
-const firebaseConfig = {
-  apiKey: "COLE_AQUI",
-  authDomain: "COLE_AQUI",
-  projectId: "COLE_AQUI",
-};
-firebase.initializeApp(firebaseConfig);
-
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-// Admin
+let isLogin = true; // login ou cadastro
 const ADMIN_EMAIL = "davi.243100@gmail.com";
-
-let isLogin = true; // controla se está em login ou cadastro
 
 function toggleAuth() {
   isLogin = !isLogin;
@@ -72,87 +55,89 @@ function toggleAuth() {
   document.getElementById("switchAuth").innerText = isLogin ? "Cadastrar" : "Já tenho conta";
 }
 
-function login() {
-  const emailInput = document.getElementById("email").value;
-  const passwordInput = document.getElementById("password").value;
+function authAction() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
 
-  if (!emailInput || !passwordInput) return alert("Preencha email e senha");
+  if (!email || !password) return alert("Preencha email e senha");
+
+  // pegar usuários do localStorage
+  let users = JSON.parse(localStorage.getItem("users") || "[]");
 
   if (isLogin) {
     // LOGIN
-    auth.signInWithEmailAndPassword(emailInput, passwordInput)
-      .catch(err => alert(err.message));
+    const user = users.find(u => u.email === email && u.password === password);
+    if (!user) return alert("Email ou senha incorretos");
+    loginUser(user.email);
   } else {
     // CADASTRO
-    auth.createUserWithEmailAndPassword(emailInput, passwordInput)
-      .then(() => alert("Cadastro realizado com sucesso!"))
-      .catch(err => alert(err.message));
+    if (users.find(u => u.email === email)) return alert("Email já cadastrado");
+    users.push({ email, password });
+    localStorage.setItem("users", JSON.stringify(users));
+    alert("Cadastro realizado com sucesso!");
+    loginUser(email);
+  }
+}
+
+function loginUser(email) {
+  localStorage.setItem("currentUser", email);
+  document.getElementById("authBox").classList.add("hidden");
+  if (email === ADMIN_EMAIL) {
+    document.getElementById("adminBox").classList.remove("hidden");
+    loadOrders();
+  } else {
+    document.getElementById("shopBox").classList.remove("hidden");
   }
 }
 
 function logout() {
-  auth.signOut();
+  localStorage.removeItem("currentUser");
+  document.getElementById("authBox").classList.remove("hidden");
+  document.getElementById("shopBox").classList.add("hidden");
+  document.getElementById("adminBox").classList.add("hidden");
 }
 
-// Troca de páginas
-auth.onAuthStateChanged(user => {
-  const authBox = document.getElementById("authBox");
-  const shopBox = document.getElementById("shopBox");
-  const adminBox = document.getElementById("adminBox");
-
-  if (!user) {
-    authBox.classList.remove("hidden");
-    shopBox.classList.add("hidden");
-    adminBox.classList.add("hidden");
-    return;
-  }
-
-  authBox.classList.add("hidden");
-
-  if (user.email === ADMIN_EMAIL) {
-    adminBox.classList.remove("hidden");
-    loadOrders();
-  } else {
-    shopBox.classList.remove("hidden");
-  }
-});
-
-// Enviar pedido
+// Pedidos
 function sendOrder() {
   const productInput = document.getElementById("product");
   const product = productInput.value;
   if (!product) return alert("Digite o produto");
 
-  db.collection("orders").add({
-    user: auth.currentUser.email,
+  let orders = JSON.parse(localStorage.getItem("orders") || "[]");
+  orders.push({
+    user: localStorage.getItem("currentUser"),
     product,
     status: "Pendente",
-    created: new Date()
-  }).then(() => {
-    alert("Pedido enviado!");
-    productInput.value = "";
+    created: new Date().toLocaleString()
   });
+  localStorage.setItem("orders", JSON.stringify(orders));
+  alert("Pedido enviado!");
+  productInput.value = "";
 }
 
 // Carregar pedidos admin
 function loadOrders() {
   const ordersDiv = document.getElementById("orders");
-  db.collection("orders").orderBy("created","desc")
-    .onSnapshot(snapshot => {
-      ordersDiv.innerHTML = "";
-      snapshot.forEach(doc => {
-        const o = doc.data();
-        ordersDiv.innerHTML += `
-          <div class="order">
-            <b>Usuário:</b> ${o.user}<br>
-            <b>Produto:</b> ${o.product}<br>
-            <b>Status:</b> ${o.status}
-          </div>
-        `;
-      });
-    });
+  let orders = JSON.parse(localStorage.getItem("orders") || "[]");
+  ordersDiv.innerHTML = "";
+  orders.reverse().forEach(o => {
+    ordersDiv.innerHTML += `
+      <div class="order">
+        <b>Usuário:</b> ${o.user}<br>
+        <b>Produto:</b> ${o.product}<br>
+        <b>Status:</b> ${o.status}<br>
+        <b>Criado:</b> ${o.created}
+      </div>
+    `;
+  });
 }
+
+// Auto-login se já estiver
+window.onload = () => {
+  const currentUser = localStorage.getItem("currentUser");
+  if (currentUser) loginUser(currentUser);
+};
 </script>
 
 </body>
-  </html>
+</html>
